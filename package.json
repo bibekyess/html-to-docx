@@ -74,7 +74,7 @@
     "build:dev": "NODE_ENV=development rollup -c",
     "build:prod": "NODE_ENV=production rollup -c",
     "diff:docx": "node scripts/diff-docx.js",
-    "prepare": "husky install",
+    "prepare": "npm run build && (husky install || true)",
     "postinstall": "node scripts/postinstall.js",
     "test:ts-example": "npm run build && cross-env TS_NODE_PROJECT=example/typescript/tsconfig.json ts-node -r tsconfig-paths/register example/typescript/typescript-example.ts"
   },
