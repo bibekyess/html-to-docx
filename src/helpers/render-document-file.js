@@ -93,6 +93,21 @@ export const buildList = async (vNode, docxDocumentInstance, xmlFragment) => {
 
     const parentVNodeProperties = tempVNodeObject.node.properties;
 
+    // Tables cannot live inside paragraphs in OOXML — emit as standalone block elements.
+    if (isVNode(tempVNodeObject.node) && tempVNodeObject.node.tagName === 'table') {
+      const tableFragment = await xmlBuilder.buildTable(
+        tempVNodeObject.node,
+        {
+          maximumWidth: docxDocumentInstance.availableDocumentSpace,
+          rowCantSplit: docxDocumentInstance.tableRowCantSplit,
+        },
+        docxDocumentInstance
+      );
+      xmlFragment.import(tableFragment);
+      // eslint-disable-next-line no-continue
+      continue;
+    }
+
     if (
       isVText(tempVNodeObject.node) ||
       (isVNode(tempVNodeObject.node) && !['ul', 'ol', 'li'].includes(tempVNodeObject.node.tagName))
@@ -123,6 +138,14 @@ export const buildList = async (vNode, docxDocumentInstance, xmlFragment) => {
               childVNode.tagName,
               childVNode.properties
             ),
+          });
+        } else if (isVNode(childVNode) && childVNode.tagName === 'table') {
+          // Table inside a list item — pass through as-is for block-level emission.
+          accumulator.push({
+            node: childVNode,
+            level: tempVNodeObject.level,
+            type: tempVNodeObject.type,
+            numberingId: tempVNodeObject.numberingId,
           });
         } else {
           // eslint-disable-next-line no-lonely-if
@@ -439,6 +462,7 @@ async function renderDocumentFile(docxDocumentInstance, properties = {}) {
     // Apply inherited properties from parent elements to child elements
     // Properties object contains CSS-style properties that should be inherited (e.g., alignment, fonts)
     // This enables proper formatting when content is injected into existing document structure
+    // eslint-disable-next-line no-restricted-syntax
     for (const child of vTree) {
       // Validate properties object and ensure child.properties.style exists
       if (properties && typeof properties === 'object' && child.properties) {
@@ -452,6 +476,7 @@ async function renderDocumentFile(docxDocumentInstance, properties = {}) {
     }
   } else {
     // Handle single VTree node (not an array)
+    // eslint-disable-next-line no-lonely-if
     if (properties && typeof properties === 'object' && vTree.properties) {
       if (!vTree.properties.style) {
         vTree.properties.style = {};
